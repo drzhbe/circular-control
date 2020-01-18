@@ -2,4 +2,4 @@
 
 https://drzhbe.github.io/circular-control/
 
-[demo](./circular-control.gif)
+![demo](./circular-control.gif)
