@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>circular</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #circle {
+      /*display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;*/
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .section._active {
+      fill: #ffc107;
+    }
+    #result {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-family: sans-serif;
+      font-size: 2em;
+      user-select: none;
+    }
+    .result-content {
+      transition: transform .2s;
+    }
+  </style>
+</head>
+<body>
+  <div id='circle'></div>
+  <div id='result'><div class='result-content'>0<div></div>
+  <script>
+    function Circle(slicesCount=5) {
+      const o = 200; // origin { x: 100, y: 100 }
+      const innerCircleRadius = 100;
+      const outerCircleRadius = 50;
+      const sliceAngle = (Math.PI * 2) / slicesCount;
+      const slices = [];
+      for (let i = 0; i < slicesCount; i++) {
+        const a1 = sliceAngle * i - Math.PI / 2;
+        const a2 = sliceAngle * (i + 1) - Math.PI / 2;
+        console.log(a1, a2)
+        const Ax = o + innerCircleRadius * Math.cos(a1);
+        const Ay = o + innerCircleRadius * Math.sin(a1);
+        const Bx = o + (innerCircleRadius + outerCircleRadius) * Math.cos(a1);
+        const By = o + (innerCircleRadius + outerCircleRadius) * Math.sin(a1);
+        const Cx = o + (innerCircleRadius + outerCircleRadius) * Math.cos(a2);
+        const Cy = o + (innerCircleRadius + outerCircleRadius) * Math.sin(a2);
+        const Dx = o + innerCircleRadius * Math.cos(a2);
+        const Dy = o + innerCircleRadius * Math.sin(a2);
+        slices.push(`
+          M ${Ax} ${Ay}
+          L ${Bx} ${By}
+          A ${0} ${0} 0 0 0 ${Cx} ${Cy}
+          L ${Dx} ${Dy}
+          A ${0} ${0} ${sliceAngle} 0 0 ${Ax} ${Ay}
+        `);
+      }
+      return slices.join(' ');
+    }
+    function NGram(n=5) {
+      const o = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      const innerCircleRadius = 100;
+      const outerCircleRadius = window.innerWidth;
+      const sliceAngle = (Math.PI * 2) / n;
+      const slices = [];
+      for (let i = 0; i < n; i++) {
+        const a1 = sliceAngle * i - Math.PI / 2; // - half a circle to make 0º pointing up
+        const a2 = sliceAngle * (i + 1) - Math.PI / 2;
+        const Ax = o.x + innerCircleRadius * Math.cos(a1);
+        const Ay = o.y + innerCircleRadius * Math.sin(a1);
+        const Bx = o.x + (innerCircleRadius + outerCircleRadius) * Math.cos(a1);
+        const By = o.y + (innerCircleRadius + outerCircleRadius) * Math.sin(a1);
+        const Cx = o.x + (innerCircleRadius + outerCircleRadius) * Math.cos(a2);
+        const Cy = o.y + (innerCircleRadius + outerCircleRadius) * Math.sin(a2);
+        const Dx = o.x + innerCircleRadius * Math.cos(a2);
+        const Dy = o.y + innerCircleRadius * Math.sin(a2);
+        slices.push(`
+          M ${Ax} ${Ay}
+          L ${Bx} ${By}
+          L ${Cx} ${Cy}
+          L ${Dx} ${Dy}
+          Z
+        `);
+      }
+      return slices
+        .map(d => Path({ d, className: 'section', fill: '#F1D95C', stroke: 'black' }))
+        .join(' ');
+    }
+    function Path({ d, className='', fill='black', strokeWidth=2, stroke='transparent' }) {
+      return `<path class="${className}" d="${d}" fill="${fill}" stroke-width="${strokeWidth}" stroke="${stroke}"/>`;
+    }
+    function SVG(path, w=500, h=500) {
+      return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${path}</svg>`;
+    }
+
+
+    const store = {
+      sectionsCount: 5,
+      filling: false,
+      activeIndex: -1,
+      activeCircle: 0, // set in the process of filling up and
+                       // shows how many circles were filled up
+    };
+
+    const domNodes = {
+      sections: undefined,
+    };
+
+    const result = document.querySelector('.result-content');
+    const circle = document.getElementById('circle');
+    circle.innerHTML = SVG(NGram(store.sectionsCount), window.innerWidth, window.innerHeight);
+    domNodes.sections = document.querySelectorAll('.section');
+
+    document.addEventListener('pointerdown', e => {
+      store.filling = true;
+      result.innerText = 0;
+    });
+    document.addEventListener('pointerup', e => {
+      store.filling = false;
+      store.activeIndex = -1;
+      store.activeCircle = 0;
+      domNodes.sections.forEach(n => n.classList.remove('_active'));
+    });
+    document.addEventListener('pointermove', e => {
+      if (!store.filling) {
+        return;
+      }
+      const ox = window.innerWidth / 2;
+      const oy = window.innerHeight / 2;
+      const a = Math.atan2(ox - e.clientX, oy - e.clientY) * -1;
+
+      const sectionAngle = (Math.PI * 2) / store.sectionsCount;
+      const angle = a < 0 ? Math.PI * 2 + a : a;
+      const sectionIndex = Math.floor(angle / sectionAngle);
+      if (store.activeIndex === sectionIndex) {
+        return;
+      }
+      if (store.activeIndex !== -1) {
+        domNodes.sections.forEach(n => n.classList.remove('_active'));
+      }
+      if (store.activeIndex === store.sectionsCount - 1
+        && sectionIndex === 0 // started the new circle
+      ) {
+        store.activeCircle++;
+      } else if (store.activeIndex === 0
+        && sectionIndex === store.sectionsCount - 1
+      ) {
+        store.activeCircle = Math.max(0, store.activeCircle - 1);
+      }
+      store.activeIndex = sectionIndex;
+      for (let i = 0; i < store.activeIndex + 1; i++) {
+        domNodes.sections[i].classList.add('_active');
+      }
+      result.style.transform = `scale(2)`;
+      setTimeout(() => {
+        result.style.transform = 'scale(1)';
+      }, 100);
+      result.innerText = store.activeCircle * store.sectionsCount + store.activeIndex + 1;
+    });
+  </script>
+</body>
+</html>
