@@ -40,34 +40,6 @@
   <div id='circle'></div>
   <div id='result'><div class='result-content'>0<div></div>
   <script>
-    function Circle(slicesCount=5) {
-      const o = 200; // origin { x: 100, y: 100 }
-      const innerCircleRadius = 100;
-      const outerCircleRadius = 50;
-      const sliceAngle = (Math.PI * 2) / slicesCount;
-      const slices = [];
-      for (let i = 0; i < slicesCount; i++) {
-        const a1 = sliceAngle * i - Math.PI / 2;
-        const a2 = sliceAngle * (i + 1) - Math.PI / 2;
-        console.log(a1, a2)
-        const Ax = o + innerCircleRadius * Math.cos(a1);
-        const Ay = o + innerCircleRadius * Math.sin(a1);
-        const Bx = o + (innerCircleRadius + outerCircleRadius) * Math.cos(a1);
-        const By = o + (innerCircleRadius + outerCircleRadius) * Math.sin(a1);
-        const Cx = o + (innerCircleRadius + outerCircleRadius) * Math.cos(a2);
-        const Cy = o + (innerCircleRadius + outerCircleRadius) * Math.sin(a2);
-        const Dx = o + innerCircleRadius * Math.cos(a2);
-        const Dy = o + innerCircleRadius * Math.sin(a2);
-        slices.push(`
-          M ${Ax} ${Ay}
-          L ${Bx} ${By}
-          A ${0} ${0} 0 0 0 ${Cx} ${Cy}
-          L ${Dx} ${Dy}
-          A ${0} ${0} ${sliceAngle} 0 0 ${Ax} ${Ay}
-        `);
-      }
-      return slices.join(' ');
-    }
     function NGram(n=5) {
       const o = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       const innerCircleRadius = 100;
@@ -106,12 +78,16 @@
 
 
     const store = {
-      sectionsCount: 5,
+      sectionsCount: sectionsCountFromUrl() || 5,
       filling: false,
       activeIndex: -1,
       activeCircle: 0, // set in the process of filling up and
                        // shows how many circles were filled up
+      blipPool: [], // audio nodes for blip sounds
+      blipIndex: 0, // index of the blip to play next
     };
+
+    createBlipPool();
 
     const domNodes = {
       sections: undefined,
@@ -119,8 +95,7 @@
 
     const result = document.querySelector('.result-content');
     const circle = document.getElementById('circle');
-    circle.innerHTML = SVG(NGram(store.sectionsCount), window.innerWidth, window.innerHeight);
-    domNodes.sections = document.querySelectorAll('.section');
+    renderControl();
 
     document.addEventListener('pointerdown', e => {
       store.filling = true;
@@ -146,9 +121,12 @@
       if (store.activeIndex === sectionIndex) {
         return;
       }
+
       if (store.activeIndex !== -1) {
         domNodes.sections.forEach(n => n.classList.remove('_active'));
       }
+
+      // Track active circle.
       if (store.activeIndex === store.sectionsCount - 1
         && sectionIndex === 0 // started the new circle
       ) {
@@ -158,16 +136,51 @@
       ) {
         store.activeCircle = Math.max(0, store.activeCircle - 1);
       }
+
       store.activeIndex = sectionIndex;
       for (let i = 0; i < store.activeIndex + 1; i++) {
         domNodes.sections[i].classList.add('_active');
       }
+
+      // Animate the number.
       result.style.transform = `scale(2)`;
       setTimeout(() => {
         result.style.transform = 'scale(1)';
       }, 100);
+
       result.innerText = store.activeCircle * store.sectionsCount + store.activeIndex + 1;
+      playBlip();
     });
+
+    window.addEventListener('hashchange', () => {
+      // It doesn't work with 2 sections.
+      const sectionsCount = sectionsCountFromUrl();
+      if (isFinite(sectionsCount)) {
+        store.sectionsCount = sectionsCount;
+        renderControl();
+      }
+    });
+
+    function renderControl() {
+      circle.innerHTML = SVG(NGram(store.sectionsCount), window.innerWidth, window.innerHeight);
+      domNodes.sections = document.querySelectorAll('.section');
+    }
+
+    function sectionsCountFromUrl() {
+      return Math.max(3, parseInt(location.hash.slice(1)));
+    }
+
+    function createBlipPool({
+      soundSrc = './blip.wav',
+      poolSize = 5,
+    } = {}) {
+      store.blipPool = new Array(poolSize).fill(0).map(() => new Audio(soundSrc));
+    }
+
+    function playBlip() {
+      store.blipPool[store.blipIndex].play();
+      store.blipIndex = (store.blipIndex + 1) % store.blipPool.length;
+    }
   </script>
 </body>
 </html>
