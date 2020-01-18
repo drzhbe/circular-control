@@ -100,6 +100,7 @@
     document.addEventListener('pointerdown', e => {
       store.filling = true;
       result.innerText = 0;
+      handleTouch(e);
     });
     document.addEventListener('pointerup', e => {
       store.filling = false;
@@ -111,6 +112,19 @@
       if (!store.filling) {
         return;
       }
+      handleTouch(e);
+    });
+
+    window.addEventListener('hashchange', () => {
+      // It doesn't work with 2 sections.
+      const sectionsCount = sectionsCountFromUrl();
+      if (isFinite(sectionsCount)) {
+        store.sectionsCount = sectionsCount;
+        renderControl();
+      }
+    });
+
+    function handleTouch(e) {
       const ox = window.innerWidth / 2;
       const oy = window.innerHeight / 2;
       const a = Math.atan2(ox - e.clientX, oy - e.clientY) * -1;
@@ -150,16 +164,7 @@
 
       result.innerText = store.activeCircle * store.sectionsCount + store.activeIndex + 1;
       playBlip();
-    });
-
-    window.addEventListener('hashchange', () => {
-      // It doesn't work with 2 sections.
-      const sectionsCount = sectionsCountFromUrl();
-      if (isFinite(sectionsCount)) {
-        store.sectionsCount = sectionsCount;
-        renderControl();
-      }
-    });
+    }
 
     function renderControl() {
       circle.innerHTML = SVG(NGram(store.sectionsCount), window.innerWidth, window.innerHeight);
