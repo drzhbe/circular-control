@@ -39,8 +39,7 @@
     function NGram(n=5) {
       const o = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       const innerCircleRadius = 100;
-      const outerCircleRadius = 200;
-      // const outerCircleRadius = window.innerWidth;
+      const outerCircleRadius = 100;
       const sliceAngle = (Math.PI * 2) / n;
       const slices = [];
       for (let i = 0; i < n; i++) {
@@ -75,7 +74,7 @@
 
 
     const store = {
-      sectionsCount: sectionsCountFromUrl() || 5,
+      sectionsCount: sectionsCountFromUrl() || 10,
       sectionDomNodes: undefined,
       filling: false, // true when user tapped down the screen and didn't tap up yet
       activeIndex: -1, // tells which section is under the finger
